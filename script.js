@@ -1,4 +1,4 @@
-// Constants for fare calculation
+ // Constants for fare calculation
 const INITIAL_FARE = 29.0;
 const THRESHOLD_FARE = 105.2;
 const REGULAR_RATE = 2.1;
