@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Hong Kong Taxi Meter</title>
+    <style>
+        body {
+            background: black;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .meter {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .display {
+            border: 2px solid white;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .display-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .section-label {
+            color: white;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 5px;
+        }
+
+        .value-display {
+            color: white;
+            display: flex;
+            align-items: baseline;
+        }
+
+        .currency {
+            font-size: 12px;
+            margin-right: 8px;
+        }
+
+        .digit-display {
+            font-family: 'Courier New', monospace;
+            font-size: 48px;
+            color: #ff0000;
+            letter-spacing: 2px;
+        }
+
+        .small-digit-display {
+            font-size: 32px;
+        }
+
+        .hired-status {
+            color: #ff0000;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            text-align: center;
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-button {
+            width: 100%;
+            height: 32px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .button-label {
+            color: white;
+            font-size: 12px;
+        }
+
+        .wait-button { background: #444; }
+        .wait-button.active { background: #ff0000; }
+        .empty-button { background: white; }
+        .stop-button { background: #444; }
+        .stop-button.active { background: #ff0000; }
+        .extras-button { background: #444; }
+
+    </style>
+</head>
+<body>
+    <div class="meter">
+        <div class="display">
+            <div class="display-grid">
+                <div>
+                    <div class="section-label">
+                        <span>F A R E</span>
+                        <span>C[×10]</span>
+                    </div>
+                    <div class="value-display">
+                        <span class="currency">HK$</span>
+                        <span class="digit-display" id="fareDisplay">29.0</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="section-label">
+                        <span>E X T R A S</span>
+                        <span>C[×10]</span>
+                    </div>
+                    <div class="value-display">
+                        <span class="currency">HK$</span>
+                        <span class="digit-display small-digit-display" id="extrasDisplay">0.0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hired-status" id="hiredStatus">FOR HIRE</div>
+        </div>
+
+        <div class="buttons">
+            <div class="button-container">
+                <button class="control-button wait-button" id="waitButton"></button>
+                <span class="button-label">往停</span>
+            </div>
+            <div class="button-container">
+                <button class="control-button empty-button" disabled></button>
+                <span class="button-label">空</span>
+            </div>
+            <div class="button-container">
+                <button class="control-button stop-button" id="stopButton"></button>
+                <span class="button-label">暫停</span>
+            </div>
+            <div class="button-container">
+                <button class="control-button extras-button" id="add10Button"></button>
+                <span class="button-label">$10</span>
+            </div>
+            <div class="button-container">
+                <button class="control-button extras-button" id="add1Button"></button>
+                <span class="button-label">$1</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let fare = 29.0;
+        let extras = 0.0;
+        let isHired = false;
+        let isWaiting = false;
+        let distance = 0;
+        let waitTime = 0;
+        let timer;
+
+        const fareDisplay = document.getElementById('fareDisplay');
+        const extrasDisplay = document.getElementById('extrasDisplay');
+        const hiredStatus = document.getElementById('hiredStatus');
+        const waitButton = document.getElementById('waitButton');
+        const stopButton = document.getElementById('stopButton');
+        const add10Button = document.getElementById('add10Button');
+        const add1Button = document.getElementById('add1Button');
+
+        function calculateFare(dist, wait) {
+            let totalFare = 29.0;
+            
+            if (dist > 2000) {
+                const additionalMeters = dist - 2000;
+                const segments = Math.floor(additionalMeters / 200);
+                
+                if (totalFare < 105.2) {
+                    const segmentsUntilThreshold = Math.floor((105.2 - 29.0) / 2.1);
+                    const regularSegments = Math.min(segments, segmentsUntilThreshold);
+                    totalFare += regularSegments * 2.1;
+                    
+                    const remainingSegments = segments - regularSegments;
+                    if (remainingSegments > 0) {
+                        totalFare += remainingSegments * 1.4;
+                    }
+                } else {
+                    totalFare += segments * 1.4;
+                }
+            }
+            
+            if (wait > 0) {
+                const waitSegments = Math.floor(wait / 60);
+                if (totalFare < 105.2) {
+                    const segmentsUntilThreshold = Math.floor((105.2 - totalFare) / 2.1);
+                    const regularSegments = Math.min(waitSegments, segmentsUntilThreshold);
+                    totalFare += regularSegments * 2.1;
+                    
+                    const remainingSegments = waitSegments - regularSegments;
+                    if (remainingSegments > 0) {
+                        totalFare += remainingSegments * 1.4;
+                    }
+                } else {
+                    totalFare += waitSegments * 1.4;
+                }
+            }
+            
+            return Number(totalFare.toFixed(1));
+        }
+
+        function updateDisplay() {
+            fareDisplay.textContent = fare.toFixed(1);
+            extrasDisplay.textContent = extras.toFixed(1);
+            hiredStatus.textContent = isHired ? 'HIRED' : 'FOR HIRE';
+            waitButton.classList.toggle('active', isWaiting);
+            stopButton.classList.toggle('active', isHired);
+        }
+
+        function startTrip() {
+            timer = setInterval(() => {
+                if (isWaiting) {
+                    waitTime++;
+                } else {
+                    distance += 50;
+                }
+                fare = calculateFare(distance, waitTime);
+                updateDisplay();
+            }, 1000);
+        }
+
+        function stopTrip() {
+            clearInterval(timer);
+        }
+
+        waitButton.addEventListener('click', () => {
+            if (isHired) {
+                isWaiting = !isWaiting;
+                updateDisplay();
+            }
+        });
+
+        stopButton.addEventListener('click', () => {
+            isHired = !isHired;
+            if (isHired) {
+                fare = 29.0;
+                extras = 0.0;
+                distance = 0;
+                waitTime = 0;
+                startTrip();
+            } else {
+                stopTrip();
+            }
+            updateDisplay();
+        });
+
+        add10Button.addEventListener('click', () => {
+            if (isHired) {
+                extras += 10;
+                updateDisplay();
+            }
+        });
+
+        add1Button.addEventListener('click', () => {
+            if (isHired) {
+                extras += 1;
+                updateDisplay();
+            }
+        });
+
+        updateDisplay();
+    </script>
+</body>
+</html>
