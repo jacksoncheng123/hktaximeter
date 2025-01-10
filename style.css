@@ -124,3 +124,26 @@ body {
 .control-button:disabled {
     cursor: not-allowed;
 }
+/* Previous CSS remains the same, adding new styles for stats */
+/* ... (previous CSS code) ... */
+
+.stats {
+    color: white;
+    font-size: 14px;
+    margin: 10px 0;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.stats div {
+    margin: 5px 0;
+}
+
+#gpsStatus.active {
+    color: #00ff00;
+}
+
+#gpsStatus.error {
+    color: #ff0000;
+}
